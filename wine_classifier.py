@@ -25,6 +25,29 @@ MODES = ['feature_sel', 'knn', 'alt', 'knn_3d', 'knn_pca']
 def feature_selection(train_set, train_labels, **kwargs):
     # write your code here and make sure you return the features at the end of 
     # the function
+
+    n_features = train_set.shape[1]
+    fig, ax = plt.subplots(n_features, n_features)
+    plt.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, wspace=0.2, hspace=0.4)
+
+    class_1_colour = r'#3366ff'
+    class_2_colour = r'#cc3300'
+    class_3_colour = r'#ffc34d'
+
+    class_colours = [class_1_colour, class_2_colour, class_3_colour]
+
+    # write your code here
+    for i in range(13):
+        for j in range(13):
+            ax[i, j].set_title('Features {} vs {}'.format(i + 1, j + 1))
+
+            for n in range(len(train_labels)):
+                ax[i, j].scatter(train_set[n, i], train_set[n, j], color = class_colours[int(train_labels[n]) - 1], s=0.01)
+                
+    plt.show()
+
+    print("Done")
+    
     return []
 
 
