@@ -12,6 +12,7 @@ from __future__ import print_function
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 from utilities import load_data, print_features, print_predictions
 
 # you may use these colours to produce the scatter plots
@@ -131,9 +132,47 @@ def plot_matrix(matrix, ax=None):
 
 
 def alternative_classifier(train_set, train_labels, test_set, **kwargs):
+    features = feature_selection(train_set, train_labels)
+    
+    train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
+    test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
+
+
+    class_data = []
+    for i in range(1, 4):
+        class_data.append(train_set[train_labels == i])
+
+
+    means = np.zeros((3, 2))
+    stdevs = np.zeros((3, 2))
+    
+    for i in range(len(class_data)):
+        data = class_data[i]
+        means[i, 0] = data[:, 0].mean()
+        means[i, 1] = data[:, 1].mean()
+
+        stdevs[i, 0] = data[:, 0].std()
+        stdevs[i, 1] = data[:, 1].std()
+
+
+    probabilities = np.ones((len(test_set), 3))
+    for i in range(len(test_set)):
+        data = test_set[i]
+
+        for attr in range(2):
+            for j in range(3):
+                p = stats.norm.pdf(data[attr], loc = means[j, attr], scale = stdevs[j, attr])
+                probabilities[i, j] *= p
+
+
+    results = []
+    for p in probabilities:
+        results.append(np.argmax(p) + 1)
+    
+    
     # write your code here and make sure you return the predictions at the end of 
     # the function
-    return []
+    return results
 
 
 def knn_three_features(train_set, train_labels, test_set, k, **kwargs):
@@ -146,6 +185,16 @@ def knn_pca(train_set, train_labels, test_set, k, n_components=2, **kwargs):
     # write your code here and make sure you return the predictions at the end of 
     # the function
     return []
+
+
+def percent_correct(pred_labels, gt_labels):
+    correct = 0
+    
+    for i in range(len(pred_labels)):
+        if pred_labels[i] == gt_labels[i]:
+            correct += 1
+
+    return correct / len(pred_labels)
 
 
 def parse_args():
@@ -183,6 +232,10 @@ if __name__ == '__main__':
     elif mode == 'alt':
         predictions = alternative_classifier(train_set, train_labels, test_set)
         print_predictions(predictions)
+
+        print(percent_correct(predictions, test_labels))
+        cm = calculate_confusion_matrix(test_labels, predictions)
+        plot_matrix(cm)
     elif mode == 'knn_3d':
         predictions = knn_three_features(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
