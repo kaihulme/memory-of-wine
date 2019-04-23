@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+from scipy import spatial
 from utilities import load_data, print_features, print_predictions
 
 # you may use these colours to produce the scatter plots
@@ -50,11 +51,7 @@ def feature_selection(train_set, train_labels, **kwargs):
 ##                
 ##    plt.show()
     
-    return [12, 9]
-
-
-def dist(p1, p2):
-    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+    return [1, 2]
 
 def knn(train_set, train_labels, test_set, k, **kwargs):
     features = feature_selection(train_set, train_labels)
@@ -62,15 +59,10 @@ def knn(train_set, train_labels, test_set, k, **kwargs):
     train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
     test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
 
-    centroids = np.zeros((3, 2))
-    for i in range(2):
-        for c in range(1, 4):
-            centroids[c - 1, i] = np.mean(train_set[train_labels == c, i])
-
     results = []
 
-    for set in test_set:
-        distances = [dist(set, p) for p in train_set]
+    for d in test_set:
+        distances = [spatial.distance.euclidean(d, p) for p in train_set]
 
         closest = []
 
@@ -137,7 +129,6 @@ def alternative_classifier(train_set, train_labels, test_set, **kwargs):
     train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
     test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
 
-
     class_data = []
     for i in range(1, 4):
         class_data.append(train_set[train_labels == i])
@@ -176,9 +167,38 @@ def alternative_classifier(train_set, train_labels, test_set, **kwargs):
 
 
 def knn_three_features(train_set, train_labels, test_set, k, **kwargs):
-    # write your code here and make sure you return the predictions at the end of 
-    # the function
-    return []
+    features = [1, 2, 3]
+
+    train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]], train_set[:, features[2]]))
+    test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]], test_set[:, features[2]]))
+
+    results = []
+
+    for d in test_set:
+        distances = [spatial.distance.minkowski(d, p, 2) for p in train_set]
+
+        closest = []
+
+        for i in range(1, k + 1):
+            index = np.argmin(distances)
+            closest.append(train_labels[index] - 1)
+            distances[index] = float("inf")
+
+        tied = True
+        counts = []
+        while tied:
+            counts = np.bincount(closest)
+            
+            most_common = np.max(counts)
+            if np.count_nonzero(counts == most_common) > 1:
+                closest = closest[:-1]
+            else:
+                tied = False
+
+        label = np.argmax(counts) + 1
+        results.append(label)
+    
+    return results
 
 
 def knn_pca(train_set, train_labels, test_set, k, n_components=2, **kwargs):
@@ -226,9 +246,10 @@ if __name__ == '__main__':
     elif mode == 'knn':
         predictions = knn(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
-        
-        ## cm = calculate_confusion_matrix(test_labels, predictions)
-        ## plot_matrix(cm)
+
+        print(percent_correct(predictions, test_labels))
+##        cm = calculate_confusion_matrix(test_labels, predictions)
+##        plot_matrix(cm)
     elif mode == 'alt':
         predictions = alternative_classifier(train_set, train_labels, test_set)
         print_predictions(predictions)
@@ -239,6 +260,10 @@ if __name__ == '__main__':
     elif mode == 'knn_3d':
         predictions = knn_three_features(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
+
+        print(percent_correct(predictions, test_labels))
+##        cm = calculate_confusion_matrix(test_labels, predictions)
+##        plot_matrix(cm)
     elif mode == 'knn_pca':
         prediction = knn_pca(train_set, train_labels, test_set, args.k)
         print_predictions(prediction)
