@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from scipy import spatial
 from utilities import load_data, print_features, print_predictions
+from sklearn.decomposition import PCA
 
 # you may use these colours to produce the scatter plots
 CLASS_1_C = r'#3366ff'
@@ -51,46 +52,61 @@ def feature_selection(train_set, train_labels, **kwargs):
 ##                
 ##    plt.show()
     
-    return [1, 2]
+    return [6, 9]
 
-def knn(train_set, train_labels, test_set, k, **kwargs):
+def feature_sel_plot_3d(train_set, train_labels):
     features = feature_selection(train_set, train_labels)
-    
-    train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
-    test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
 
+    n_features = train_set.shape[1]
+    fig, ax = plt.subplots(4, 6)
+    plt.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, wspace=0.2, hspace=0.4)
+
+    class_1_colour = r'#3366ff'
+    class_2_colour = r'#cc3300'
+    class_3_colour = r'#ffc34d'
+
+    class_colours = [class_1_colour, class_2_colour, class_3_colour]
+
+    x = 0
+    for i in range(13):
+        if i not in features:
+            for j in range(2):
+                a = x % 6
+                b = x // 6
+
+                ax[b, a].set_title('Features {} vs {}'.format(i, features[j]))
+
+                for n in range(len(train_labels)):
+                    ax[b, a].scatter(train_set[n, i], train_set[n, features[j]], color = class_colours[int(train_labels[n]) - 1], s=0.5)
+
+                x += 1
+
+    plt.show()
+
+
+
+def run_knn(train_set, train_labels, test_set, k):
     results = []
 
-    for d in test_set:
-        distances = [spatial.distance.euclidean(d, p) for p in train_set]
+    for point in test_set:
+        distances = [ spatial.distance.euclidean(point, neighbor) for neighbor in train_set ]
 
-        closest = []
+        neighbors = []
+        for i in range(k):
+            closest = np.argmin(distances)
 
-        for i in range(1, k + 1):
-            index = np.argmin(distances)
-            closest.append(train_labels[index] - 1)
-            distances[index] = float("inf")
+            neighbors.append(train_labels[closest])
+            distances[closest] = float("inf")
 
-        tied = True
-        counts = []
-        while tied:
-            counts = np.bincount(closest)
-            
-            most_common = np.max(counts)
-            if np.count_nonzero(counts == most_common) > 1:
-                closest = closest[:-1]
-            else:
-                tied = False
+        counts = np.bincount(neighbors)
+        most_common = np.argmax(counts)
 
-        label = np.argmax(counts) + 1
-        
-        results.append(label)
+        results.append(most_common)
 
-    correct = 0
-    
-    # write your code here and make sure you return the predictions at the end of 
-    # the function
     return results
+
+def knn(train_set, train_labels, test_set, k, **kwargs):
+    return run_knn(train_set, train_labels, test_set, k)
 
 def calculate_confusion_matrix(gt_labels, pred_labels):
     gt_labels = gt_labels.astype(int)
@@ -167,44 +183,32 @@ def alternative_classifier(train_set, train_labels, test_set, **kwargs):
 
 
 def knn_three_features(train_set, train_labels, test_set, k, **kwargs):
-    features = [1, 2, 3]
-
-    train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]], train_set[:, features[2]]))
-    test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]], test_set[:, features[2]]))
-
-    results = []
-
-    for d in test_set:
-        distances = [spatial.distance.minkowski(d, p, 2) for p in train_set]
-
-        closest = []
-
-        for i in range(1, k + 1):
-            index = np.argmin(distances)
-            closest.append(train_labels[index] - 1)
-            distances[index] = float("inf")
-
-        tied = True
-        counts = []
-        while tied:
-            counts = np.bincount(closest)
-            
-            most_common = np.max(counts)
-            if np.count_nonzero(counts == most_common) > 1:
-                closest = closest[:-1]
-            else:
-                tied = False
-
-        label = np.argmax(counts) + 1
-        results.append(label)
-    
-    return results
+    return run_knn(train_set, train_labels, test_set, k)
 
 
 def knn_pca(train_set, train_labels, test_set, k, n_components=2, **kwargs):
+    pca = PCA(n_components = 2)
+
+    pca.fit(train_set)
+    train_set_r = pca.transform(train_set)
+    test_set_r = pca.transform(test_set)
+
+
+    # fig, ax = plt.subplots()
+    # class_1_colour = r'#3366ff'
+    # class_2_colour = r'#cc3300'
+    # class_3_colour = r'#ffc34d'
+
+    # class_colours = [class_1_colour, class_2_colour, class_3_colour]
+
+    # for n in range(len(train_labels)):
+    #     ax.scatter(reduced[n, 0], reduced[n, 1], color = class_colours[int(train_labels[n]) - 1], s=1)
+    # plt.show()
+
+
     # write your code here and make sure you return the predictions at the end of 
     # the function
-    return []
+    return run_knn(train_set_r, train_labels, test_set_r, k)
 
 
 def percent_correct(pred_labels, gt_labels):
@@ -242,14 +246,19 @@ if __name__ == '__main__':
                                                                        test_labels_path=args.test_labels_path)
     if mode == 'feature_sel':
         selected_features = feature_selection(train_set, train_labels)
+
+        feature_sel_plot_3d(train_set, train_labels)
         print_features(selected_features)
     elif mode == 'knn':
+        features = feature_selection(train_set, train_labels)
+    
+        train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
+        test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
+
         predictions = knn(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
 
         print(percent_correct(predictions, test_labels))
-##        cm = calculate_confusion_matrix(test_labels, predictions)
-##        plot_matrix(cm)
     elif mode == 'alt':
         predictions = alternative_classifier(train_set, train_labels, test_set)
         print_predictions(predictions)
@@ -258,14 +267,20 @@ if __name__ == '__main__':
         cm = calculate_confusion_matrix(test_labels, predictions)
         plot_matrix(cm)
     elif mode == 'knn_3d':
+        features = feature_selection(train_set, train_labels)
+        features.append(10)
+
+        train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]], train_set[:, features[2]]))
+        test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]], test_set[:, features[2]]))
+
         predictions = knn_three_features(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
 
         print(percent_correct(predictions, test_labels))
-##        cm = calculate_confusion_matrix(test_labels, predictions)
-##        plot_matrix(cm)
     elif mode == 'knn_pca':
-        prediction = knn_pca(train_set, train_labels, test_set, args.k)
-        print_predictions(prediction)
+        predictions = knn_pca(train_set, train_labels, test_set, args.k)
+
+        print(percent_correct(predictions, test_labels))
+        print_predictions(predictions)
     else:
         raise Exception('Unrecognised mode: {}. Possible modes are: {}'.format(mode, MODES))
