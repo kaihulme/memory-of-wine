@@ -247,25 +247,23 @@ if __name__ == '__main__':
     if mode == 'feature_sel':
         selected_features = feature_selection(train_set, train_labels)
 
-        feature_sel_plot_3d(train_set, train_labels)
         print_features(selected_features)
     elif mode == 'knn':
         features = feature_selection(train_set, train_labels)
-    
         train_set = np.column_stack((train_set[:, features[0]], train_set[:, features[1]]))
         test_set = np.column_stack((test_set[:, features[0]], test_set[:, features[1]]))
 
         predictions = knn(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
 
-        print(percent_correct(predictions, test_labels))
+        #print(percent_correct(predictions, test_labels))
     elif mode == 'alt':
         predictions = alternative_classifier(train_set, train_labels, test_set)
         print_predictions(predictions)
 
-        print(percent_correct(predictions, test_labels))
-        cm = calculate_confusion_matrix(test_labels, predictions)
-        plot_matrix(cm)
+        # print(percent_correct(predictions, test_labels))
+        # cm = calculate_confusion_matrix(test_labels, predictions)
+        # plot_matrix(cm)
     elif mode == 'knn_3d':
         features = feature_selection(train_set, train_labels)
         features.append(10)
@@ -276,11 +274,11 @@ if __name__ == '__main__':
         predictions = knn_three_features(train_set, train_labels, test_set, args.k)
         print_predictions(predictions)
 
-        print(percent_correct(predictions, test_labels))
+        #print(percent_correct(predictions, test_labels))
     elif mode == 'knn_pca':
         predictions = knn_pca(train_set, train_labels, test_set, args.k)
 
-        print(percent_correct(predictions, test_labels))
         print_predictions(predictions)
+        #print(percent_correct(predictions, test_labels))
     else:
         raise Exception('Unrecognised mode: {}. Possible modes are: {}'.format(mode, MODES))
